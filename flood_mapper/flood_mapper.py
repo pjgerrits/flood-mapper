@@ -1,6 +1,104 @@
 import ee
+import time
 
 ee.Initialize()
+
+
+def _check_task_completed(task_id):
+    """
+    Returns True if a task export completes successfully, else returns false.
+
+    Inputs:
+        task_id (str): Google Earth Engine task id
+
+    Returns:
+        boolean
+
+    """
+    status = ee.data.getTaskStatus(task_id)[0]
+    if status['state'] in (ee.batch.Task.State.CANCELLED,
+                           ee.batch.Task.State.FAILED):
+        if 'error_message' in status:
+            print(status['error_message'])
+        return True
+    elif status['state'] == ee.batch.Task.State.COMPLETED:
+        return True
+    return False
+
+
+def wait_for_tasks(task_ids=[], timeout=3600):
+    """
+    Wait for tasks to complete, fail, or timeout
+    Waits for all active tasks if task_ids is not provided
+    Note: Tasks will not be canceled after timeout, and
+    may continue to run.
+
+    Inputs:
+        task_ids (list):
+        timeout (int):
+
+    Returns:
+        None
+    """
+    start = time.time()
+    elapsed = 0
+    while elapsed < timeout or timeout == 0:
+        elapsed = time.time() - start
+        finished = [_check_task_completed(task) for task in task_ids]
+        if all(finished):
+            print(f'Tasks {task_ids} completed after {elapsed}s')
+            return True
+        time.sleep(5)
+    print(f'Stopped waiting for {len(task_ids)} tasks after {timeout} seconds')
+    return False
+
+
+def export_flood_data(flooded_area_vector, flooded_area_raster, image_after_flood, region):
+    """
+    Exports the results of derive_flood_extents function to Google Drive.
+
+    Inputs:
+        flooded_area_vector (ee.FeatureCollection): Detected flood extents as vector geometries.
+        flooded_area_raster (ee.Image): Detected flood extents as a binary raster.
+        image_after_flood (ee.Image): The 'after' Sentinel-1 image containing view of the flood waters.
+        region (ee.Geometry.Polygon): Geographic extent of analysis area.
+
+    Returns:
+        None
+    """
+
+    print('Exporting detected flood extents to your Google Drive. Please wait...')
+
+    s1_task = ee.batch.Export.image.toDrive(image=image_after_flood,
+                                            description='s1_flooded_scene',
+                                            scale=30,
+                                            region=region,
+                                            fileNamePrefix='s1_flooded_scene',
+                                            crs='EPSG:4326',
+                                            fileFormat='GeoTIFF')
+
+    raster_task = ee.batch.Export.image.toDrive(image=flooded_area_raster,
+                                                description='flood_extents',
+                                                scale=30,
+                                                region=region,
+                                                fileNamePrefix='flood_extents',
+                                                crs='EPSG:4326',
+                                                fileFormat='GeoTIFF')
+
+    vector_task = ee.batch.Export.table.toDrive(collection=flooded_area_vector,
+                                                description='flood_extents_vector',
+                                                fileFormat='shp',
+                                                fileNamePrefix='flood_extents_vector')
+
+    s1_task.start()
+    raster_task.start()
+    vector_task.start()
+
+    print('Exporting flooded Sentinel-1 scene: Task id ', s1_task.id)
+    print('Exporting flood extent geotiff: Task id ', raster_task.id)
+    print('Exporting flood extent shapefile:  Task id ', vector_task.id)
+
+    wait_for_tasks([s1_task.id, raster_task.id, vector_task.id])
 
 
 def retrieve_image_collection(search_region, start_date, end_date, polarization="VH", pass_direction="ASCENDING"):
@@ -107,7 +205,7 @@ def mask_slopes(image):
 
 
 def derive_flood_extents(aoi, before_start_date, before_end_date, after_start_date, after_end_date,
-                         difference_threshold=1.25):
+                         difference_threshold=1.25, export=False):
     """
     Set start and end dates of a period BEFORE and AFTER a flood. These periods need to be long enough for Sentinel-1 to
     acquire an image.
@@ -155,6 +253,7 @@ def derive_flood_extents(aoi, before_start_date, before_end_date, after_start_da
                                                   bestEffort=True,
                                                   tileScale=2)
 
-    flooded_image = after_filtered
+    if export:
+        export_flood_data(flood_vectors, flood_rasters, after_filtered, aoi)
 
-    return flood_vectors, flood_rasters, flooded_image
+    return flood_vectors, flood_rasters, after_filtered
