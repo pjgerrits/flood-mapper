@@ -2,13 +2,20 @@
 name = "flood-mapper"
 version = "0.1.0"
 description = ""
-authors = ["cate <catherine.seale@ukho.gov.uk>"]
+authors = ["cate <catherineseale@gmail.com>"]
+license = "MIT"
+readme = "README.rst"
+homepage = "https://github.com/cateseale/flood-mapper"
+repository = "https://github.com/cateseale/flood-mapper"
 
 [tool.poetry.dependencies]
 python = "^3.9"
+earthengine-api = "^0.1.288"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
+jupyter = "^1.0.0"
+folium = "^0.12.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
