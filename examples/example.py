@@ -1,6 +1,9 @@
 import ee
 from flood_mapper import derive_flood_extents
 
+ee.Initialize()
+ee.Authenticate()
+
 # Define a start and end date between to select imagery before the flooding event
 before_start = '2020-10-01'
 before_end = '2020-10-15'
