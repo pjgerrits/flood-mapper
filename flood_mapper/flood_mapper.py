@@ -53,13 +53,15 @@ def wait_for_tasks(task_ids=[], timeout=3600):
     return False
 
 
-def export_flood_data(flooded_area_vector, flooded_area_raster, image_after_flood, region, filename='flood_extents'):
+def export_flood_data(flooded_area_vector, flooded_area_raster, image_before_flood, image_after_flood, region,
+                      filename='flood_extents'):
     """
     Exports the results of derive_flood_extents function to Google Drive.
 
     Inputs:
         flooded_area_vector (ee.FeatureCollection): Detected flood extents as vector geometries.
         flooded_area_raster (ee.Image): Detected flood extents as a binary raster.
+        image_before_flood (ee.Image): The 'before' Sentinel-1 image.
         image_after_flood (ee.Image): The 'after' Sentinel-1 image containing view of the flood waters.
         region (ee.Geometry.Polygon): Geographic extent of analysis area.
         filename (str): Desired filename prefix for exported files
@@ -70,13 +72,21 @@ def export_flood_data(flooded_area_vector, flooded_area_raster, image_after_floo
 
     print('Exporting detected flood extents to your Google Drive. Please wait...')
 
-    s1_task = ee.batch.Export.image.toDrive(image=image_after_flood,
-                                            description='export_flooded_s1_scene',
-                                            scale=30,
-                                            region=region,
-                                            fileNamePrefix=filename + '_s1_after',
-                                            crs='EPSG:4326',
-                                            fileFormat='GeoTIFF')
+    s1_before_task = ee.batch.Export.image.toDrive(image=image_before_flood,
+                                                   description='export_before_s1_scene',
+                                                   scale=30,
+                                                   region=region,
+                                                   fileNamePrefix=filename + '_s1_before',
+                                                   crs='EPSG:4326',
+                                                   fileFormat='GeoTIFF')
+
+    s1_after_task = ee.batch.Export.image.toDrive(image=image_after_flood,
+                                                  description='export_flooded_s1_scene',
+                                                  scale=30,
+                                                  region=region,
+                                                  fileNamePrefix=filename + '_s1_after',
+                                                  crs='EPSG:4326',
+                                                  fileFormat='GeoTIFF')
 
     raster_task = ee.batch.Export.image.toDrive(image=flooded_area_raster,
                                                 description='export_flood_extents_raster',
@@ -91,15 +101,17 @@ def export_flood_data(flooded_area_vector, flooded_area_raster, image_after_floo
                                                 fileFormat='shp',
                                                 fileNamePrefix=filename + '_polygons')
 
-    s1_task.start()
+    s1_before_task.start()
+    s1_after_task.start()
     raster_task.start()
     vector_task.start()
 
-    print('Exporting flooded Sentinel-1 scene: Task id ', s1_task.id)
+    print('Exporting before Sentinel-1 scene: Task id ', s1_before_task.id)
+    print('Exporting flooded Sentinel-1 scene: Task id ', s1_after_task.id)
     print('Exporting flood extent geotiff: Task id ', raster_task.id)
     print('Exporting flood extent shapefile:  Task id ', vector_task.id)
 
-    wait_for_tasks([s1_task.id, raster_task.id, vector_task.id])
+    wait_for_tasks([s1_before_task.id, s1_after_task.id, raster_task.id, vector_task.id])
 
 
 def retrieve_image_collection(search_region, start_date, end_date, polarization="VH", pass_direction="ASCENDING"):
@@ -226,7 +238,8 @@ def derive_flood_extents(aoi, before_start_date, before_end_date, after_start_da
     Returns:
         flood_vectors (ee.FeatureCollection): Detected flood extents as vector geometries.
         flood_rasters (ee.Image): Detected flood extents as a binary raster.
-        flooded_image (ee.Image): The 'after' Sentinel-1 image containing view of the flood waters.
+        before_filtered (ee.Image): The 'before' Sentinel-1 image.
+        after_filtered (ee.Image): The 'after' Sentinel-1 image containing view of the flood waters.
     """
 
     before_flood_img_col = retrieve_image_collection(aoi, before_start_date, before_end_date)
@@ -257,6 +270,6 @@ def derive_flood_extents(aoi, before_start_date, before_end_date, after_start_da
                                                   tileScale=2)
 
     if export:
-        export_flood_data(flood_vectors, flood_rasters, after_filtered, aoi, export_filename)
+        export_flood_data(flood_vectors, flood_rasters, before_filtered, after_filtered, aoi, export_filename)
 
-    return flood_vectors, flood_rasters, after_filtered
+    return flood_vectors, flood_rasters, before_filtered, after_filtered

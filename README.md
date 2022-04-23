@@ -32,11 +32,12 @@ region = ee.Geometry.Polygon([[[-85.93, 16.08],
                                [-85.40, 16.08]]])
 
 # Change the export flag to 'False' if you do not wish to export the results to Google Drive
-detected_flood_vector, detected_flood_raster, imagery = derive_flood_extents(region,
-                                                                             before_start,
-                                                                             before_end,
-                                                                             after_start,
-                                                                             after_end,
-                                                                             export=True)
+detected_flood_vector, detected_flood_raster, before_imagery, after_imagery = derive_flood_extents(region,
+                                                                                                   before_start,
+                                                                                                   before_end,
+                                                                                                   after_start,
+                                                                                                   after_end,
+                                                                                                   export=True,
+                                                                                                   export_filename='my_filename')
 
 ```
