@@ -1,8 +1,6 @@
 import ee
 import time
 
-ee.Initialize()
-
 
 def _check_task_completed(task_id):
     """
