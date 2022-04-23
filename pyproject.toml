@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "flood-mapper"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["cate <catherineseale@gmail.com>"]
 license = "MIT"
@@ -9,7 +9,7 @@ homepage = "https://github.com/cateseale/flood-mapper"
 repository = "https://github.com/cateseale/flood-mapper"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.6"
 earthengine-api = "^0.1.288"
 
 [tool.poetry.dev-dependencies]
