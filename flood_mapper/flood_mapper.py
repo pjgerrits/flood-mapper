@@ -53,7 +53,7 @@ def wait_for_tasks(task_ids=[], timeout=3600):
     return False
 
 
-def export_flood_data(flooded_area_vector, flooded_area_raster, image_after_flood, region):
+def export_flood_data(flooded_area_vector, flooded_area_raster, image_after_flood, region, filename='flood_extents'):
     """
     Exports the results of derive_flood_extents function to Google Drive.
 
@@ -62,6 +62,7 @@ def export_flood_data(flooded_area_vector, flooded_area_raster, image_after_floo
         flooded_area_raster (ee.Image): Detected flood extents as a binary raster.
         image_after_flood (ee.Image): The 'after' Sentinel-1 image containing view of the flood waters.
         region (ee.Geometry.Polygon): Geographic extent of analysis area.
+        filename (str): Desired filename prefix for exported files
 
     Returns:
         None
@@ -70,25 +71,25 @@ def export_flood_data(flooded_area_vector, flooded_area_raster, image_after_floo
     print('Exporting detected flood extents to your Google Drive. Please wait...')
 
     s1_task = ee.batch.Export.image.toDrive(image=image_after_flood,
-                                            description='s1_flooded_scene',
+                                            description='export_flooded_s1_scene',
                                             scale=30,
                                             region=region,
-                                            fileNamePrefix='s1_flooded_scene',
+                                            fileNamePrefix=filename + '_s1_after',
                                             crs='EPSG:4326',
                                             fileFormat='GeoTIFF')
 
     raster_task = ee.batch.Export.image.toDrive(image=flooded_area_raster,
-                                                description='flood_extents',
+                                                description='export_flood_extents_raster',
                                                 scale=30,
                                                 region=region,
-                                                fileNamePrefix='flood_extents',
+                                                fileNamePrefix=filename + '_raster',
                                                 crs='EPSG:4326',
                                                 fileFormat='GeoTIFF')
 
     vector_task = ee.batch.Export.table.toDrive(collection=flooded_area_vector,
-                                                description='flood_extents_vector',
+                                                description='export_flood_extents_polygons',
                                                 fileFormat='shp',
-                                                fileNamePrefix='flood_extents_vector')
+                                                fileNamePrefix=filename + '_polygons')
 
     s1_task.start()
     raster_task.start()
@@ -205,7 +206,7 @@ def mask_slopes(image):
 
 
 def derive_flood_extents(aoi, before_start_date, before_end_date, after_start_date, after_end_date,
-                         difference_threshold=1.25, export=False):
+                         difference_threshold=1.25, export=False, export_filename='flood_extents'):
     """
     Set start and end dates of a period BEFORE and AFTER a flood. These periods need to be long enough for Sentinel-1 to
     acquire an image.
@@ -219,6 +220,8 @@ def derive_flood_extents(aoi, before_start_date, before_end_date, after_start_da
         difference_threshold (float): Threshold to be applied on the differenced image (after flood - before flood). It
             has been chosen by trial and error. In case your flood extent result shows many false-positive or negative
             signals, consider changing it.
+        export (bool): Flag to export derived flood extents to Google Drive
+        export_filename (str): Desired filename prefix for exported files. Only used if export=True.
 
     Returns:
         flood_vectors (ee.FeatureCollection): Detected flood extents as vector geometries.
@@ -254,6 +257,6 @@ def derive_flood_extents(aoi, before_start_date, before_end_date, after_start_da
                                                   tileScale=2)
 
     if export:
-        export_flood_data(flood_vectors, flood_rasters, after_filtered, aoi)
+        export_flood_data(flood_vectors, flood_rasters, after_filtered, aoi, export_filename)
 
     return flood_vectors, flood_rasters, after_filtered

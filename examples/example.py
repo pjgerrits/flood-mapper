@@ -24,5 +24,6 @@ detected_flood_vector, detected_flood_raster, imagery = derive_flood_extents(reg
                                                                              before_end,
                                                                              after_start,
                                                                              after_end,
-                                                                             export=True)
+                                                                             export=True,
+                                                                             export_filename='my_filename')
 
