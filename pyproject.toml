@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "flood-mapper"
+name = "floodmapper"
 version = "0.1.2"
 description = ""
 authors = ["cate <catherineseale@gmail.com>"]
